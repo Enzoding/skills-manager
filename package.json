@@ -1,0 +1,42 @@
+{
+  "name": "skills-manager",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Local skills management tool for CodeFlicker",
+  "private": true,
+  "scripts": {
+    "dev": "tauri dev",
+    "dev:client": "vite",
+    "build": "vite build",
+    "tauri:build": "tauri build && xattr -cr 'src-tauri/target/release/bundle/macos/Skills Manager.app'",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "@tailwindcss/vite": "^4.2.2",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
+    "@tauri-apps/plugin-fs": "^2.4.5",
+    "adm-zip": "^0.5.10",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "js-yaml": "^4.1.0",
+    "lucide-react": "^1.7.0",
+    "multer": "^1.4.5-lts.1",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "vite": "^5.1.0"
+  }
+}
