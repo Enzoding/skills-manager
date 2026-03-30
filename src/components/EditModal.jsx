@@ -1,6 +1,27 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { FileText, Save, X } from 'lucide-react'
+import CodeMirror from '@uiw/react-codemirror'
+import { markdown } from '@codemirror/lang-markdown'
+import { oneDark } from '@codemirror/theme-one-dark'
+import { EditorView } from '@codemirror/view'
+
+const lightTheme = EditorView.theme({
+  '&': {
+    fontFamily: '"SF Mono", "Menlo", monospace',
+    fontSize: '12.5px',
+    background: '#ffffff',
+    flex: '1',
+    height: '100%',
+  },
+  '.cm-content': { padding: '14px 16px', lineHeight: '1.75' },
+  '.cm-focused': { outline: 'none' },
+  '.cm-line': { paddingLeft: 0 },
+  '.cm-scroller': { overflow: 'auto', fontFamily: 'inherit' },
+  '.cm-gutters': { display: 'none' },
+  '.cm-cursor': { borderLeftColor: '#007aff' },
+  '.cm-selectionBackground': { background: 'rgba(0,122,255,.15) !important' },
+})
 
 export function EditModal({ skill, onClose, onSaved, addToast }) {
   const [selectedFile, setFile] = useState('SKILL.md')
@@ -34,9 +55,16 @@ export function EditModal({ skill, onClose, onSaved, addToast }) {
     finally { setSaving(false) }
   }
 
+  const handleKeyDown = (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault()
+      if (dirty) handleSave()
+    }
+  }
+
   return (
     <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal modal-lg">
+      <div className="modal modal-lg" onKeyDown={handleKeyDown}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="modal-title">编辑 — {skill.name}</span>
@@ -60,15 +88,27 @@ export function EditModal({ skill, onClose, onSaved, addToast }) {
           <div className="edit-editor">
             {loading
               ? <div className="edit-loading">加载中…</div>
-              : <textarea className="edit-textarea"
+              : <CodeMirror
                   value={content}
-                  onChange={e => { setContent(e.target.value); setDirty(true) }}
-                  onKeyDown={e => {
-                    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-                      e.preventDefault(); if (dirty) handleSave()
-                    }
+                  extensions={[markdown(), lightTheme]}
+                  onChange={(val) => { setContent(val); setDirty(true) }}
+                  basicSetup={{
+                    lineNumbers: false,
+                    foldGutter: false,
+                    dropCursor: false,
+                    allowMultipleSelections: false,
+                    indentOnInput: true,
+                    bracketMatching: true,
+                    closeBrackets: true,
+                    autocompletion: false,
+                    rectangularSelection: false,
+                    crosshairCursor: false,
+                    highlightActiveLine: false,
+                    highlightSelectionMatches: false,
+                    closeBracketsKeymap: false,
+                    searchKeymap: false,
                   }}
-                  spellCheck={false}
+                  style={{ flex: 1, minHeight: 380, maxHeight: '58vh', overflow: 'auto', display: 'flex', flexDirection: 'column' }}
                 />
             }
           </div>

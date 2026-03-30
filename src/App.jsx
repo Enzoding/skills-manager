@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Zap, Search, X, FolderOpen, FileText, Pencil, Trash2, Plus, RotateCw } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { ImportModal } from './components/ImportModal'
 import { EditModal }   from './components/EditModal'
 import { ConfirmModal } from './components/ConfirmModal'
@@ -46,7 +48,12 @@ export default function App() {
   const [loading, setLoading]         = useState(true)
   const [refreshing, setRefreshing]   = useState(false)
   const [search, setSearch]           = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selected, setSelected]       = useState(null)
+  const debounceRef = useRef(null)
+  const [sidebarW, setSidebarW]       = useState(248)
+  const resizerRef = useRef(null)
+  const sidebarRef = useRef(null)
   const [showImport, setShowImport]   = useState(false)
   const [editSkill, setEditSkill]     = useState(null)
   const [deleteSkill, setDeleteSkill] = useState(null)
@@ -91,8 +98,32 @@ export default function App() {
     catch (err) { addToast(String(err), 'error') }
   }
 
+  const handleStartResize = (e) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startW = sidebarW
+    const onMove = (ev) => {
+      const w = Math.min(400, Math.max(180, startW + ev.clientX - startX))
+      setSidebarW(w)
+    }
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      if (resizerRef.current) resizerRef.current.classList.remove('dragging')
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    if (resizerRef.current) resizerRef.current.classList.add('dragging')
+  }
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 150)
+    return () => clearTimeout(debounceRef.current)
+  }, [search])
+
   const grouped = useMemo(() => {
-    const q = search.toLowerCase()
+    const q = debouncedSearch.toLowerCase()
     const filtered = skills.filter(s =>
       s.name.toLowerCase().includes(q) ||
       s.description.toLowerCase().includes(q)
@@ -103,7 +134,7 @@ export default function App() {
       map.get(s.agentId).skills.push(s)
     }
     return [...map.values()]
-  }, [skills, search])
+  }, [skills, debouncedSearch])
 
   const cur = selected ? (skills.find(s => s.dirPath === selected.dirPath) || selected) : null
 
@@ -111,7 +142,8 @@ export default function App() {
     <div className="layout">
 
       {/* ── Sidebar ── */}
-      <aside className="sidebar">
+      <aside className="sidebar" ref={sidebarRef} style={{ '--sidebar-w': sidebarW + 'px', width: sidebarW }}>
+        <div className="sidebar-resizer" ref={resizerRef} onMouseDown={handleStartResize} />
 
         {/* Top bar */}
         <div className="sidebar-top">
@@ -125,8 +157,7 @@ export default function App() {
               onClick={handleRefresh} title="刷新"
               style={{ opacity: refreshing ? 0.5 : 1 }}>
               <RotateCw size={13} style={{
-                transition: 'transform 0.4s',
-                transform: refreshing ? 'rotate(360deg)' : 'rotate(0deg)',
+                animation: refreshing ? 'spin 0.7s linear infinite' : 'none',
               }} />
             </button>
             <button className="btn btn-primary btn-sm" style={{ gap: 4 }}
@@ -270,7 +301,9 @@ export default function App() {
             {cur.body && (
               <div className="section">
                 <div className="section-label">文档内容</div>
-                <div className="body-block"><pre>{cur.body}</pre></div>
+                <div className="body-block markdown-body">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{cur.body}</ReactMarkdown>
+                </div>
               </div>
             )}
 

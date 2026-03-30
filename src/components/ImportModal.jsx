@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Upload, FileText, ChevronLeft, X, Check } from 'lucide-react'
@@ -17,6 +17,7 @@ export function ImportModal({ agentSources, onClose, onInstalled, addToast }) {
   const [checkedIds, setCheckedIds] = useState([])   // 用数组，避免 Set 闭包问题
   const [loading, setLoading]       = useState(false)
   const [installing, setInstalling] = useState(false)
+  const [dragging, setDragging]     = useState(false)
 
   const available = agentSources.filter(a => a.exists)
 
@@ -24,6 +25,17 @@ export function ImportModal({ agentSources, onClose, onInstalled, addToast }) {
     setCheckedIds(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     )
+  }
+
+  const loadFile = async (path) => {
+    setLoading(true)
+    try {
+      const result = await invoke('preview_skill_zip', { zipPath: path })
+      setPreview(result)
+      setStep('preview')
+      if (available.length > 0) setCheckedIds([available[0].id])
+    } catch (err) { addToast(String(err), 'error') }
+    finally { setLoading(false) }
   }
 
   const handlePick = async () => {
@@ -36,14 +48,24 @@ export function ImportModal({ agentSources, onClose, onInstalled, addToast }) {
         }],
       })
       if (!path) return
-      setLoading(true)
-      const result = await invoke('preview_skill_zip', { zipPath: path })
-      setPreview(result)
-      setStep('preview')
-      // 默认勾选第一个可用 agent
-      if (available.length > 0) setCheckedIds([available[0].id])
+      await loadFile(path)
     } catch (err) { addToast(String(err), 'error') }
-    finally { setLoading(false) }
+  }
+
+  const handleDrop = async (e) => {
+    e.preventDefault()
+    setDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (!file) return
+    const allowed = /\.(zip|skill|tar\.gz|tgz|tar)$/i
+    if (!allowed.test(file.name)) {
+      addToast('不支持的文件格式，请使用 .zip .skill .tar.gz .tgz .tar', 'error')
+      return
+    }
+    // Tauri 中拖入文件可直接读取 path（macOS WebView 会暴露 webkitRelativePath 或 path 属性）
+    const path = file.path || (window.__TAURI__ ? file.name : null)
+    if (!path) { addToast('无法获取文件路径，请使用点击选择', 'error'); return }
+    await loadFile(path)
   }
 
   const handleInstall = async () => {
@@ -71,16 +93,24 @@ export function ImportModal({ agentSources, onClose, onInstalled, addToast }) {
 
         <div className="modal-body" style={{ overflowY: 'auto', maxHeight: '65vh' }}>
           {step === 'pick' && (
-            <button className="upload-zone" style={{ width: '100%', border: 'none' }}
-              onClick={handlePick} disabled={loading}>
-              <Upload size={32} color="var(--text-quaternary)" style={{ opacity: .6 }} />
+            <div
+              className={`upload-zone${dragging ? ' dragging' : ''}`}
+              style={{ width: '100%' }}
+              onClick={!loading ? handlePick : undefined}
+              onDragOver={e => { e.preventDefault(); setDragging(true) }}
+              onDragLeave={e => { e.preventDefault(); setDragging(false) }}
+              onDrop={handleDrop}
+            >
+              <Upload size={32} color={dragging ? 'var(--accent)' : 'var(--text-quaternary)'} style={{ opacity: dragging ? 1 : .6 }} />
               <div>
-                <div className="upload-zone-title">{loading ? '读取中…' : '点击选择文件'}</div>
+                <div className="upload-zone-title">
+                  {loading ? '读取中…' : dragging ? '松开以导入' : '点击选择或拖拽文件'}
+                </div>
                 <div className="upload-zone-sub" style={{ marginTop: 4 }}>
                   支持 .zip · .skill · .tar.gz · .tgz · .tar
                 </div>
               </div>
-            </button>
+            </div>
           )}
 
           {step === 'preview' && preview && (

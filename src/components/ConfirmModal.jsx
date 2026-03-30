@@ -26,7 +26,7 @@ export function ConfirmModal({ title, message, danger, onConfirm, onClose }) {
           <button className="btn btn-ghost btn-sm" onClick={onClose}>取消</button>
           <button
             className={`btn btn-sm ${danger ? 'btn-danger' : 'btn-primary'}`}
-            onClick={() => { onConfirm(); onClose() }}>
+            onClick={onConfirm}>
             {danger ? '确认删除' : '确认'}
           </button>
         </div>
