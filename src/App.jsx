@@ -32,10 +32,13 @@ function Avatar({ name, agentId, size = 32, radius = 8 }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: radius,
-      background: `${color}1a`, color,
+      background: `linear-gradient(135deg, ${color}22, ${color}38)`,
+      color,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.42, fontWeight: 800, flexShrink: 0,
       letterSpacing: '-0.5px',
+      boxShadow: `0 2px 8px ${color}18`,
+      border: `1px solid ${color}15`,
     }}>
       {name.charAt(0).toUpperCase()}
     </div>
@@ -151,6 +154,7 @@ export default function App() {
             <Zap size={15} color="var(--accent)" fill="var(--accent)" />
             Skills
             {skills.length > 0 && <span className="brand-count">{skills.length}</span>}
+            <span className="brand-underline" />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button className="btn btn-ghost btn-sm btn-icon-only"
@@ -202,6 +206,8 @@ export default function App() {
                   style={{ background: AGENT_COLORS[group.id] || 'var(--text-quaternary)' }} />
                 {group.name}
                 <span className="group-count">{group.skills.length}</span>
+                <span className="group-accent-line"
+                  style={{ background: `linear-gradient(90deg, ${AGENT_COLORS[group.id] || 'var(--text-quaternary)'}, transparent)` }} />
               </div>
               {group.skills.map(skill => {
                 const isActive = cur?.dirPath === skill.dirPath
@@ -244,7 +250,7 @@ export default function App() {
       <main className="main">
         {!cur ? (
           <div className="empty" style={{ height: '100%' }}>
-            <div style={{
+            <div className="empty-icon-pulse" style={{
               width: 64, height: 64, borderRadius: 20,
               background: 'var(--hover-bg)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -256,36 +262,38 @@ export default function App() {
           </div>
         ) : (
           <div className="detail">
-            {/* Header */}
-            <div className="detail-head">
-              <div className="detail-title-row">
-                <Avatar name={cur.name} agentId={cur.agentId} size={52} radius={14} />
-                <div>
-                  <div className="detail-name">{cur.name}</div>
-                  <div className="detail-tags">
-                    <span className="badge badge-blue" style={{
-                      background: `${AGENT_COLORS[cur.agentId] || '#5856d6'}18`,
-                      color: AGENT_COLORS[cur.agentId] || '#5856d6',
-                    }}>
-                      {cur.agentName}
-                    </span>
-                    <span className="badge badge-gray">
-                      <FileText size={9} />
-                      {cur.files?.length || 0} 文件
-                    </span>
-                    {cur.license && (
-                      <span className="badge badge-gray">{cur.license}</span>
-                    )}
+            {/* Hero Header */}
+            <div className="detail-hero">
+              <div className="detail-head">
+                <div className="detail-title-row">
+                  <Avatar name={cur.name} agentId={cur.agentId} size={52} radius={14} />
+                  <div>
+                    <div className="detail-name">{cur.name}</div>
+                    <div className="detail-tags">
+                      <span className="badge badge-blue" style={{
+                        background: `${AGENT_COLORS[cur.agentId] || '#5856d6'}18`,
+                        color: AGENT_COLORS[cur.agentId] || '#5856d6',
+                      }}>
+                        {cur.agentName}
+                      </span>
+                      <span className="badge badge-gray">
+                        <FileText size={9} />
+                        {cur.files?.length || 0} 文件
+                      </span>
+                      {cur.license && (
+                        <span className="badge badge-gray">{cur.license}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="detail-actions">
-                <button className="btn btn-secondary btn-sm" onClick={() => setEditSkill(cur)}>
-                  <Pencil size={12} /> 编辑
-                </button>
-                <button className="btn btn-danger btn-sm" onClick={() => setDeleteSkill(cur)}>
-                  <Trash2 size={12} /> 删除
-                </button>
+                <div className="detail-actions">
+                  <button className="btn btn-secondary btn-sm" onClick={() => setEditSkill(cur)}>
+                    <Pencil size={12} /> 编辑
+                  </button>
+                  <button className="btn btn-danger btn-sm" onClick={() => setDeleteSkill(cur)}>
+                    <Trash2 size={12} /> 删除
+                  </button>
+                </div>
               </div>
             </div>
 
