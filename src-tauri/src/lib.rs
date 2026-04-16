@@ -243,21 +243,16 @@ fn scan_zip(path: &str) -> Result<(Vec<String>, Option<String>, Option<String>),
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
 
     let mut skill_md: Option<String> = None;
-    let mut files = Vec::new();
-    let mut top_dir: Option<String> = None;
+    let mut raw_names = Vec::new();
 
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
         let entry_name = entry.name().to_string();
         if entry.is_dir() { continue; }
+        // Skip macOS resource fork entries
+        if entry_name.starts_with("__MACOSX") || entry_name.contains("/__MACOSX/") { continue; }
 
-        let parts: Vec<&str> = entry_name.splitn(2, '/').collect();
-        if parts.len() == 2 && !parts[0].is_empty() {
-            top_dir = Some(parts[0].to_string());
-            files.push(parts[1].to_string());
-        } else {
-            files.push(entry_name.clone());
-        }
+        raw_names.push(entry_name.clone());
 
         if entry_name == "SKILL.md" || entry_name.ends_with("/SKILL.md") {
             let mut content = String::new();
@@ -265,27 +260,55 @@ fn scan_zip(path: &str) -> Result<(Vec<String>, Option<String>, Option<String>),
             skill_md = Some(content);
         }
     }
+
+    // Determine if all files share a single top-level directory
+    let top_dir = detect_single_top_dir(&raw_names);
+
+    let files = if let Some(ref top) = top_dir {
+        let prefix = format!("{}/", top);
+        raw_names.iter()
+            .filter_map(|n| n.strip_prefix(&prefix).map(|s| s.to_string()))
+            .filter(|s| !s.is_empty())
+            .collect()
+    } else {
+        raw_names
+    };
+
     Ok((files, skill_md, top_dir))
+}
+
+/// Check if all file paths share a single common top-level directory.
+/// Returns Some(dir_name) only if ALL files are under the same top dir.
+fn detect_single_top_dir(names: &[String]) -> Option<String> {
+    if names.is_empty() { return None; }
+    let mut candidate: Option<&str> = None;
+    for name in names {
+        let parts: Vec<&str> = name.splitn(2, '/').collect();
+        if parts.len() < 2 || parts[0].is_empty() {
+            // File at root level → no single top dir
+            return None;
+        }
+        match candidate {
+            None => candidate = Some(parts[0]),
+            Some(c) if c != parts[0] => return None, // multiple top dirs
+            _ => {}
+        }
+    }
+    candidate.map(|s| s.to_string())
 }
 
 fn scan_tar(path: &str, gzipped: bool) -> Result<(Vec<String>, Option<String>, Option<String>), String> {
     let file = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut skill_md: Option<String> = None;
-    let mut files = Vec::new();
-    let mut top_dir: Option<String> = None;
+    let mut raw_names = Vec::new();
 
     let mut read_archive = |reader: &mut dyn Read| -> Result<(), String> {
         let mut archive = tar::Archive::new(reader);
         for entry in archive.entries().map_err(|e| e.to_string())? {
             let mut entry = entry.map_err(|e| e.to_string())?;
             let entry_path = entry.path().map_err(|e| e.to_string())?.to_string_lossy().to_string();
-            let parts: Vec<&str> = entry_path.splitn(2, '/').collect();
-            if parts.len() == 2 && !parts[0].is_empty() {
-                top_dir = Some(parts[0].to_string());
-                files.push(parts[1].to_string());
-            } else {
-                files.push(entry_path.clone());
-            }
+            if entry_path.ends_with('/') { continue; }
+            raw_names.push(entry_path.clone());
             if entry_path == "SKILL.md" || entry_path.ends_with("/SKILL.md") {
                 let mut content = String::new();
                 entry.read_to_string(&mut content).map_err(|e| e.to_string())?;
@@ -302,6 +325,17 @@ fn scan_tar(path: &str, gzipped: bool) -> Result<(Vec<String>, Option<String>, O
         let mut f = file;
         read_archive(&mut f)?;
     }
+
+    let top_dir = detect_single_top_dir(&raw_names);
+    let files = if let Some(ref top) = top_dir {
+        let prefix = format!("{}/", top);
+        raw_names.iter()
+            .filter_map(|n| n.strip_prefix(&prefix).map(|s| s.to_string()))
+            .filter(|s| !s.is_empty())
+            .collect()
+    } else {
+        raw_names
+    };
 
     Ok((files, skill_md, top_dir))
 }
