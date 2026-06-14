@@ -4,7 +4,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { Upload, FileText, ChevronLeft, X, Check } from 'lucide-react'
 
 const AGENT_COLORS = {
-  'codeflicker':'#007aff','codeflicker-cli':'#30b0c7','agents-shared':'#5856d6',
+  'agents-shared':'#5856d6',
   'cursor':'#7c3aed','claude-dev':'#d97706','windsurf':'#059669',
   'continue':'#e11d48','claude-code':'#c9460a','opencode':'#0ea5e9',
   'codex':'#059669','aider':'#7c3aed','gemini-cli':'#1a73e8',

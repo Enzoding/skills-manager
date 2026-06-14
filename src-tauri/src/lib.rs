@@ -16,8 +16,6 @@ pub struct AgentSource {
 
 fn known_agent_dirs() -> Vec<(String, String)> {
     vec![
-        ("codeflicker".into(),     "CodeFlicker".into()),
-        ("codeflicker-cli".into(), "CodeFlicker CLI".into()),
         ("agents-shared".into(),   "Agents (Shared)".into()),
         ("cursor".into(),          "Cursor".into()),
         ("claude-dev".into(),      "Cline (Claude Dev)".into()),
@@ -36,8 +34,6 @@ fn known_agent_dirs() -> Vec<(String, String)> {
 fn agent_skills_path(agent_id: &str) -> Option<PathBuf> {
     let home = dirs::home_dir()?;
     match agent_id {
-        "codeflicker"     => Some(home.join(".codeflicker").join("skills")),
-        "codeflicker-cli" => Some(home.join(".codeflicker").join("cli").join("skills")),
         "agents-shared"   => Some(home.join(".agents").join("skills")),
         "cursor"          => Some(home.join(".cursor").join("skills")),
         "claude-dev"      => None, // glob, handled in resolve_agent_path

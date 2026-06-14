@@ -11,8 +11,6 @@ import { useToast }    from './hooks/useToast'
 import './index.css'
 
 const AGENT_COLORS = {
-  'codeflicker':     '#007aff',
-  'codeflicker-cli': '#30b0c7',
   'agents-shared':   '#5856d6',
   'cursor':          '#7c3aed',
   'claude-dev':      '#d97706',

@@ -10,12 +10,10 @@
 
 ## 功能特性
 
-- **多 Agent 支持** — 自动检测本机已安装的 14 个主流 AI 编程助手的 skills 目录：
+- **多 Agent 支持** — 自动检测本机已安装的 12 个主流 AI 编程助手的 skills 目录：
 
   | Agent | 目录路径 |
   |---|---|
-  | CodeFlicker | `~/.codeflicker/skills/` |
-  | CodeFlicker CLI | `~/.codeflicker/cli/skills/` |
   | Agents (Shared) | `~/.agents/skills/` |
   | Cursor | `~/.cursor/skills/` |
   | Cline (Claude Dev) | `~/.vscode/extensions/saoudrizwan.claude-dev-*/skills/` |
@@ -42,7 +40,7 @@
 
 ### 直接安装（推荐）
 
-1. 下载 `Skills Manager_0.1.0_aarch64.dmg`
+1. 下载 `Skills Manager_1.0.0_aarch64.dmg`
 2. 双击打开 DMG，将 **Skills Manager** 拖入 `Applications` 文件夹
 3. 打开 App（若 macOS 提示"已损坏"，在终端执行以下命令后重新打开）：
    ```bash
@@ -143,7 +141,7 @@ npx tauri build
 
 构建产物位于：
 ```
-src-tauri/target/release/bundle/dmg/Skills Manager_0.1.0_aarch64.dmg
+src-tauri/target/release/bundle/dmg/Skills Manager_1.0.0_aarch64.dmg
 src-tauri/target/release/bundle/macos/Skills Manager.app
 ```
 
