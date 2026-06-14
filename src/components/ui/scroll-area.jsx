@@ -25,7 +25,7 @@ export function ScrollBar({ className, orientation = 'vertical', ...props }) {
       )}
       {...props}
     >
-      <ScrollAreaPrimitive.Thumb className="relative flex-1 rounded-full bg-[var(--color-border)] hover:bg-[var(--color-text-dim)]" />
+      <ScrollAreaPrimitive.Thumb className="relative flex-1 rounded-[4px] bg-[var(--border)] hover:bg-[var(--text-quaternary)]" />
     </ScrollAreaPrimitive.Scrollbar>
   )
 }

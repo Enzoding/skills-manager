@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { Zap, Search, X, FolderOpen, FileText, Pencil, Trash2, Plus, RotateCw } from 'lucide-react'
+import { setTheme as setAppTheme } from '@tauri-apps/api/app'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { Zap, Search, X, FolderOpen, FileText, Pencil, Trash2, Plus, RotateCw, Sun, Moon } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ImportModal } from './components/ImportModal'
@@ -25,18 +27,28 @@ const AGENT_COLORS = {
   'zed':             '#084c8d',
 }
 
-function Avatar({ name, agentId, size = 32, radius = 8 }) {
+const THEME_STORAGE_KEY = 'skills-manager-theme'
+const THEME_WINDOW_BG = {
+  light: '#dedbd2',
+  dark: '#23231f',
+}
+
+function getInitialTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY)
+    return saved === 'dark' ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
+}
+
+function Avatar({ name, agentId, size = 32, radius = 4 }) {
   const color = AGENT_COLORS[agentId] || '#5856d6'
   return (
-    <div style={{
+    <div className="agent-avatar" style={{
+      '--agent-color': color,
       width: size, height: size, borderRadius: radius,
-      background: `linear-gradient(135deg, ${color}22, ${color}38)`,
-      color,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.42, fontWeight: 800, flexShrink: 0,
-      letterSpacing: '-0.5px',
-      boxShadow: `0 2px 8px ${color}18`,
-      border: `1px solid ${color}15`,
     }}>
       {name.charAt(0).toUpperCase()}
     </div>
@@ -58,7 +70,19 @@ export default function App() {
   const [showImport, setShowImport]   = useState(false)
   const [editSkill, setEditSkill]     = useState(null)
   const [deleteSkill, setDeleteSkill] = useState(null)
+  const [theme, setTheme]             = useState(getInitialTheme)
   const { toasts, addToast }          = useToast()
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.documentElement.style.colorScheme = theme
+  }, [theme])
+
+  useEffect(() => {
+    try { localStorage.setItem(THEME_STORAGE_KEY, theme) } catch {}
+    setAppTheme(theme).catch(() => {})
+    getCurrentWindow().setBackgroundColor(THEME_WINDOW_BG[theme]).catch(() => {})
+  }, [theme])
 
   const load = async () => {
     try {
@@ -154,7 +178,13 @@ export default function App() {
             {skills.length > 0 && <span className="brand-count">{skills.length}</span>}
             <span className="brand-underline" />
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div className="sidebar-actions">
+            <button className="btn btn-ghost btn-sm btn-icon-only"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              title={theme === 'dark' ? '切换到浅色' : '切换到深色'}
+              aria-label={theme === 'dark' ? '切换到浅色' : '切换到深色'}>
+              {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+            </button>
             <button className="btn btn-ghost btn-sm btn-icon-only"
               onClick={handleRefresh} title="刷新"
               style={{ opacity: refreshing ? 0.5 : 1 }}>
@@ -213,7 +243,7 @@ export default function App() {
                   <button key={skill.dirPath}
                     className={`skill-row${isActive ? ' active' : ''}`}
                     onClick={() => setSelected(skill)}>
-                    <Avatar name={skill.name} agentId={skill.agentId} size={30} radius={8} />
+                    <Avatar name={skill.name} agentId={skill.agentId} size={30} radius={4} />
                     <div className="skill-info">
                       <span className="skill-name">{skill.name}</span>
                       <span className="skill-desc">{skill.description || '暂无描述'}</span>
@@ -249,7 +279,7 @@ export default function App() {
         {!cur ? (
           <div className="empty" style={{ height: '100%' }}>
             <div className="empty-icon-pulse" style={{
-              width: 64, height: 64, borderRadius: 20,
+              width: 64, height: 64, borderRadius: 6,
               background: 'var(--hover-bg)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
@@ -264,7 +294,7 @@ export default function App() {
             <div className="detail-hero">
               <div className="detail-head">
                 <div className="detail-title-row">
-                  <Avatar name={cur.name} agentId={cur.agentId} size={52} radius={14} />
+                  <Avatar name={cur.name} agentId={cur.agentId} size={52} radius={6} />
                   <div>
                     <div className="detail-name">{cur.name}</div>
                     <div className="detail-tags">
@@ -347,6 +377,7 @@ export default function App() {
       )}
       {editSkill && (
         <EditModal skill={editSkill}
+          theme={theme}
           onClose={() => setEditSkill(null)} onSaved={load} addToast={addToast} />
       )}
       {deleteSkill && (
