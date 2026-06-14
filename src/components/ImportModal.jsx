@@ -185,7 +185,7 @@ export function ImportModal({ agentSources, onClose, onInstalled, addToast }) {
                         >
                           {/* Checkbox */}
                           <div style={{
-                            width: 16, height: 16, borderRadius: 5, flexShrink: 0,
+                            width: 16, height: 16, borderRadius: 3, flexShrink: 0,
                             border: isSel ? 'none' : '1.5px solid var(--border)',
                             background: isSel ? 'var(--accent)' : 'transparent',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',

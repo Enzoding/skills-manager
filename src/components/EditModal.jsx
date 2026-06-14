@@ -10,7 +10,7 @@ const lightTheme = EditorView.theme({
   '&': {
     fontFamily: '"SF Mono", "Menlo", monospace',
     fontSize: '12.5px',
-    background: '#ffffff',
+    background: '#f8f7f1',
     flex: '1',
     height: '100%',
   },
@@ -19,11 +19,11 @@ const lightTheme = EditorView.theme({
   '.cm-line': { paddingLeft: 0 },
   '.cm-scroller': { overflow: 'auto', fontFamily: 'inherit' },
   '.cm-gutters': { display: 'none' },
-  '.cm-cursor': { borderLeftColor: '#007aff' },
-  '.cm-selectionBackground': { background: 'rgba(0,122,255,.15) !important' },
+  '.cm-cursor': { borderLeftColor: '#d34a2c' },
+  '.cm-selectionBackground': { background: 'rgba(211,74,44,.18) !important' },
 })
 
-export function EditModal({ skill, onClose, onSaved, addToast }) {
+export function EditModal({ skill, theme = 'light', onClose, onSaved, addToast }) {
   const [selectedFile, setFile] = useState('SKILL.md')
   const [content, setContent]   = useState('')
   const [loading, setLoading]   = useState(false)
@@ -59,6 +59,8 @@ export function EditModal({ skill, onClose, onSaved, addToast }) {
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
       e.preventDefault()
       if (dirty) handleSave()
+    } else if (e.key === 'Escape' && !dirty) {
+      onClose()
     }
   }
 
@@ -70,7 +72,7 @@ export function EditModal({ skill, onClose, onSaved, addToast }) {
             <span className="modal-title">编辑 — {skill.name}</span>
             {dirty && <span className="badge badge-warn">未保存</span>}
           </div>
-          <button className="btn-icon" onClick={onClose}><X size={15} /></button>
+          <button className="btn-icon" onClick={onClose} aria-label="关闭"><X size={15} /></button>
         </div>
 
         <div className="edit-layout">
@@ -90,7 +92,7 @@ export function EditModal({ skill, onClose, onSaved, addToast }) {
               ? <div className="edit-loading">加载中…</div>
               : <CodeMirror
                   value={content}
-                  extensions={[markdown(), lightTheme]}
+                  extensions={[markdown(), theme === 'dark' ? oneDark : lightTheme]}
                   onChange={(val) => { setContent(val); setDirty(true) }}
                   basicSetup={{
                     lineNumbers: false,

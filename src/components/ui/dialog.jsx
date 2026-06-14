@@ -11,7 +11,7 @@ export function DialogOverlay({ className, ...props }) {
   return (
     <DialogPrimitive.Overlay
       className={cn(
-        'fixed inset-0 z-50 bg-black/20 backdrop-blur-[6px]',
+        'fixed inset-0 z-50 bg-[rgba(30,29,25,.34)]',
         'data-[state=open]:animate-[fadeIn_0.15s_ease]',
         className
       )}
@@ -28,8 +28,8 @@ export function DialogContent({ className, children, onClose, ...props }) {
         className={cn(
           'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
           'w-[92%] max-w-[500px]',
-          'bg-[var(--color-card)] border border-[var(--color-border)] rounded-[10px]',
-          'shadow-[var(--shadow-modal)]',
+          'bg-[var(--card-bg)] border border-[var(--case-edge)] rounded-[6px]',
+          'shadow-[var(--shadow-xl)]',
           'data-[state=open]:animate-[slideUp_0.18s_ease]',
           'focus:outline-none',
           className
@@ -38,7 +38,7 @@ export function DialogContent({ className, children, onClose, ...props }) {
       >
         {children}
         <DialogPrimitive.Close
-          className="absolute right-3.5 top-3.5 rounded-[5px] p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-hover)] hover:text-[var(--color-text)] transition-all duration-[140ms] focus:outline-none"
+          className="absolute right-3.5 top-3.5 rounded-[4px] p-1 text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] transition-all duration-[120ms] focus:outline-none"
           onClick={onClose}
         >
           <X size={15} />
@@ -51,7 +51,7 @@ export function DialogContent({ className, children, onClose, ...props }) {
 export function DialogHeader({ className, ...props }) {
   return (
     <div
-      className={cn('flex items-center justify-between px-[18px] pt-4 pb-[13px] border-b border-[var(--color-border-light)]', className)}
+      className={cn('flex items-center justify-between px-[18px] pt-4 pb-[13px] border-b border-[var(--case-edge)] bg-[rgba(255,255,255,.12)]', className)}
       {...props}
     />
   )
@@ -60,7 +60,7 @@ export function DialogHeader({ className, ...props }) {
 export function DialogTitle({ className, ...props }) {
   return (
     <DialogPrimitive.Title
-      className={cn('text-[15px] font-semibold text-[var(--color-text)]', className)}
+      className={cn('text-[14px] font-bold uppercase text-[var(--text-primary)]', className)}
       {...props}
     />
   )
@@ -77,8 +77,8 @@ export function DialogFooter({ className, ...props }) {
     <div
       className={cn(
         'flex items-center justify-end gap-2 px-[18px] py-3',
-        'border-t border-[var(--color-border-light)] bg-[var(--color-bg)]',
-        'rounded-b-[10px]',
+        'border-t border-[var(--case-edge)] bg-[rgba(36,34,29,.045)]',
+        'rounded-b-[6px]',
         className
       )}
       {...props}
