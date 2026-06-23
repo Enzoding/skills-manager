@@ -15,6 +15,26 @@ Skills Manager is a macOS desktop app (Tauri 2 + React) that discovers, imports,
 
 There is no test, lint, or formatter tooling configured (no ESLint/Prettier/Vitest, no Rust tests). Do not invent test commands; validate changes by building and running the app.
 
+## Release & Versioning
+Release versions must stay synchronized across:
+1. `package.json`
+2. `package-lock.json`
+3. `src-tauri/Cargo.toml`
+4. `src-tauri/tauri.conf.json`
+
+Use SemVer:
+- Patch (`x.y.Z`) for fixes only.
+- Minor (`x.Y.0`) for user-facing UI/behavior changes or new functionality.
+- Major (`X.0.0`) for breaking package/install/data compatibility changes.
+
+Release checklist:
+1. Decide the next version from the changes since the latest GitHub release.
+2. Run `npm version <version> --no-git-tag-version` to update `package.json` and `package-lock.json`.
+3. Manually update `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` to the same version.
+4. Add a dated section to `CHANGE.md`.
+5. Validate with `npm run build` and `npm run tauri:build`.
+6. Commit the version/changelog changes, tag the same commit as `v<version>`, push the branch and tag, then create a GitHub release from that tag.
+
 ## Architecture
 ### Frontend ↔ backend contract (the core of the app)
 The React frontend never touches the filesystem directly. It calls Rust via `invoke('<command>', { args })` from `@tauri-apps/api/core`, and opens the native file picker via `open()` from `@tauri-apps/plugin-dialog`. The full command surface is registered in the `invoke_handler!` macro in `src-tauri/src/lib.rs`:
