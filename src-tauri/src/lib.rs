@@ -2,6 +2,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
+use tauri::{Manager, WindowEvent};
 use walkdir::WalkDir;
 
 // =================== Agent 预设目录 ===================
@@ -479,6 +480,14 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .on_window_event(|window, event| {
+            if window.label() == "main" {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             get_agent_sources,
             get_skills,
@@ -489,6 +498,19 @@ pub fn run() {
             delete_skill,
             open_dir,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen {
+                has_visible_windows: false,
+                ..
+            } = event
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+        });
 }
