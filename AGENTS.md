@@ -32,8 +32,9 @@ Release checklist:
 2. Run `npm version <version> --no-git-tag-version` to update `package.json` and `package-lock.json`.
 3. Manually update `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` to the same version.
 4. Add a dated section to `CHANGE.md`.
-5. Validate with `npm run build` and `npm run tauri:build`.
-6. Commit the version/changelog changes, tag the same commit as `v<version>`, push the branch and tag, then create a GitHub release from that tag.
+5. Confirm Apple Developer ID signing and notarization are configured before publishing a public macOS release. A valid release must not be ad-hoc signed: `security find-identity -v -p codesigning` should show a Developer ID Application identity, `codesign -dv --verbose=4 <app>` should show a `TeamIdentifier`, and `spctl -a -vvv -t open <dmg>` should accept the DMG.
+6. Validate with `npm run build` and `npm run tauri:build`.
+7. Only after signing/notarization verification passes, commit the version/changelog changes, tag the same commit as `v<version>`, push the branch and tag, then create a GitHub release from that tag.
 
 ## Architecture
 ### Frontend ↔ backend contract (the core of the app)
