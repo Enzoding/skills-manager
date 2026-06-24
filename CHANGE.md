@@ -1,8 +1,6 @@
 # Change Log
 
-## v1.1.0 - Unreleased
-
-> Pending public release until the macOS DMG is signed with a Developer ID certificate and notarized by Apple.
+## v1.1.0 - 2026-06-24
 
 ### Added
 - Added the Braun theme styling and theme toggle.
