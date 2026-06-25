@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "1.1.0"
+version = "1.1.1"
 description = "Skills Manager - Local skills management tool for AI coding agents"
 authors = ["Enzoding <1649717343dxl@gmail.com>"]
 license = "MIT"

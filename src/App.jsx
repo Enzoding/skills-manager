@@ -33,6 +33,10 @@ const THEME_WINDOW_BG = {
   dark: '#23231f',
 }
 
+function isTauriRuntime() {
+  return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__)
+}
+
 function getInitialTheme() {
   try {
     const saved = localStorage.getItem(THEME_STORAGE_KEY)
@@ -80,11 +84,20 @@ export default function App() {
 
   useEffect(() => {
     try { localStorage.setItem(THEME_STORAGE_KEY, theme) } catch {}
+    if (!isTauriRuntime()) return
     setAppTheme(theme).catch(() => {})
-    getCurrentWindow().setBackgroundColor(THEME_WINDOW_BG[theme]).catch(() => {})
+    try {
+      getCurrentWindow().setBackgroundColor(THEME_WINDOW_BG[theme]).catch(() => {})
+    } catch {}
   }, [theme])
 
   const load = async () => {
+    if (!isTauriRuntime()) {
+      setSkills([])
+      setAgentSources([])
+      setLoading(false)
+      return
+    }
     try {
       const [skillList, sources] = await Promise.all([
         invoke('get_skills'),
@@ -128,7 +141,7 @@ export default function App() {
     const startX = e.clientX
     const startW = sidebarW
     const onMove = (ev) => {
-      const w = Math.min(400, Math.max(180, startW + ev.clientX - startX))
+      const w = Math.min(400, Math.max(212, startW + ev.clientX - startX))
       setSidebarW(w)
     }
     const onUp = () => {

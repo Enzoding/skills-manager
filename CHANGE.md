@@ -1,5 +1,11 @@
 # Change Log
 
+## v1.1.1 - 2026-06-25
+
+### Fixed
+- Fixed the Vite-only frontend preview so it no longer calls Tauri-only APIs outside the desktop runtime.
+- Improved sidebar and detail-pane responsive layout to avoid cramped controls and overflowing text.
+
 ## v1.1.0 - 2026-06-24
 
 ### Added
