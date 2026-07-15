@@ -602,7 +602,7 @@ input, textarea, [contenteditable], .markdown-body, .cm-editor {
 }
 
 .desc-text {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-secondary);
   line-height: 1.8;
 }
@@ -626,15 +626,15 @@ input, textarea, [contenteditable], .markdown-body, .cm-editor {
 }
 
 /* ── Markdown body ── */
-.markdown-body { font-size: 13.5px; color: var(--text-secondary); line-height: 1.78; }
+.markdown-body { font-size: 15px; color: var(--text-secondary); line-height: 1.78; }
 .markdown-body h1,.markdown-body h2,.markdown-body h3,.markdown-body h4 {
   font-weight: 700; color: var(--text-primary); margin: 1.2em 0 .5em;
   letter-spacing: 0; line-height: 1.35;
 }
-.markdown-body h1 { font-size: 18px; }
-.markdown-body h2 { font-size: 15.5px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-.markdown-body h3 { font-size: 14px; }
-.markdown-body h4 { font-size: 13.5px; }
+.markdown-body h1 { font-size: 20px; }
+.markdown-body h2 { font-size: 17px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.markdown-body h3 { font-size: 15.5px; }
+.markdown-body h4 { font-size: 15px; }
 .markdown-body p  { margin: .6em 0; }
 .markdown-body ul,.markdown-body ol { padding-left: 1.5em; margin: .5em 0; }
 .markdown-body li { margin: .25em 0; }
