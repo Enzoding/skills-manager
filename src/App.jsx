@@ -379,7 +379,13 @@ export default function App() {
             {/* Body */}
             {cur.body && (
               <div className="section">
-                <div className="section-label">文档内容</div>
+                <div className="section-label">
+                  文档内容
+                  <span className="skill-md-badge">
+                    <FileText size={10} style={{ flexShrink: 0 }} />
+                    SKILL.md
+                  </span>
+                </div>
                 <div className="body-block markdown-body">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{cur.body}</ReactMarkdown>
                 </div>
