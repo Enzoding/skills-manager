@@ -317,6 +317,42 @@ input, textarea, [contenteditable], .markdown-body, .cm-editor {
   display: none;
 }
 
+/* Collapsible group */
+.group-header-clickable {
+  cursor: default;
+  border-radius: 4px;
+  padding-left: 6px;
+  padding-right: 6px;
+  transition: background .14s var(--ease);
+}
+.group-header-clickable:hover {
+  background: var(--hover-bg);
+}
+.group-header-clickable.collapsed {
+  opacity: .75;
+}
+.group-chevron {
+  color: var(--text-quaternary);
+  flex-shrink: 0;
+  transition: transform .2s var(--ease);
+  transform: rotate(0deg);
+  margin-left: 2px;
+}
+.group-chevron-collapsed {
+  transform: rotate(-90deg);
+}
+.group-skills {
+  overflow: hidden;
+  max-height: 2000px;
+  transition: max-height .25s var(--ease), opacity .2s var(--ease);
+  opacity: 1;
+}
+.group-skills-collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .skill-row {
   display: flex;
   align-items: center;
