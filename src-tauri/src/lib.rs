@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{Manager, WindowEvent};
 use walkdir::WalkDir;
 
-// =================== Agent 预设目录 ===================
+// =================== Agent 注册表 ===================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AgentSource {
@@ -15,62 +15,56 @@ pub struct AgentSource {
     pub exists: bool,
 }
 
-fn known_agent_dirs() -> Vec<(String, String)> {
-    vec![
-        ("agents-shared".into(),   "Agents (Shared)".into()),
-        ("cursor".into(),          "Cursor".into()),
-        ("claude-dev".into(),      "Cline (Claude Dev)".into()),
-        ("windsurf".into(),        "Windsurf".into()),
-        ("continue".into(),        "Continue".into()),
-        ("claude-code".into(),     "Claude Code".into()),
-        ("opencode".into(),        "OpenCode".into()),
-        ("codex".into(),           "Codex CLI".into()),
-        ("aider".into(),           "Aider".into()),
-        ("gemini-cli".into(),      "Gemini CLI".into()),
-        ("copilot".into(),         "GitHub Copilot".into()),
-        ("zed".into(),             "Zed".into()),
-    ]
+#[derive(Debug, Deserialize, Clone)]
+struct AgentDef {
+    id: String,
+    name: String,
+    #[serde(rename = "globalPath")]
+    global_path: Option<String>,
 }
 
-fn agent_skills_path(agent_id: &str) -> Option<PathBuf> {
+const AGENTS_JSON: &str = include_str!("../resources/agents.json");
+
+fn agent_registry() -> &'static Vec<AgentDef> {
+    static REGISTRY: std::sync::OnceLock<Vec<AgentDef>> = std::sync::OnceLock::new();
+    REGISTRY.get_or_init(|| {
+        serde_json::from_str(AGENTS_JSON).expect("agents.json 格式错误")
+    })
+}
+
+fn expand_home(p: &str) -> Option<PathBuf> {
     let home = dirs::home_dir()?;
-    match agent_id {
-        "agents-shared"   => Some(home.join(".agents").join("skills")),
-        "cursor"          => Some(home.join(".cursor").join("skills")),
-        "claude-dev"      => None, // glob, handled in resolve_agent_path
-        "windsurf"        => Some(home.join(".windsurf").join("skills")),
-        "continue"        => Some(home.join(".continue").join("skills")),
-        "claude-code"     => Some(home.join(".claude").join("skills")),
-        "opencode"        => Some(home.join(".opencode").join("skills")),
-        "codex"           => Some(home.join(".codex").join("skills")),
-        "aider"           => Some(home.join(".aider").join("skills")),
-        "gemini-cli"      => Some(home.join(".gemini").join("skills")),
-        "copilot"         => Some(home.join(".copilot").join("skills")),
-        "zed"             => Some(home.join(".config").join("zed").join("skills")),
-        _                 => None,
+    match p.strip_prefix("~/") {
+        Some(rest) => Some(home.join(rest)),
+        None => Some(PathBuf::from(p)),
     }
 }
 
-fn resolve_agent_path(agent_id: &str) -> Option<PathBuf> {
-    let home = dirs::home_dir()?;
-    // claude-dev 需要 glob 扩展，特殊处理
-    if agent_id == "claude-dev" {
-        let base = home.join(".vscode").join("extensions");
-        if let Ok(entries) = fs::read_dir(&base) {
-            for e in entries.filter_map(|e| e.ok()) {
-                let name = e.file_name().to_string_lossy().to_string();
-                if name.starts_with("saoudrizwan.claude-dev") {
-                    let p = e.path().join("skills");
-                    if p.exists() { return Some(p); }
-                }
-            }
+fn resolve_agent_global_path(agent: &AgentDef) -> Option<PathBuf> {
+    expand_home(agent.global_path.as_deref()?)
+}
+
+/// 按物理路径去重分组，一个路径可能对应多个 agent（如 ~/.agents/skills/）。
+/// 用线性 Vec 保留 registry 中的原始出现顺序，避免 HashMap 迭代顺序不稳定。
+fn group_agents_by_path() -> Vec<(PathBuf, Vec<AgentDef>)> {
+    let mut groups: Vec<(PathBuf, Vec<AgentDef>)> = Vec::new();
+    for agent in agent_registry() {
+        let Some(path) = resolve_agent_global_path(agent) else { continue };
+        match groups.iter_mut().find(|(p, _)| *p == path) {
+            Some(entry) => entry.1.push(agent.clone()),
+            None => groups.push((path, vec![agent.clone()])),
         }
-        return None;
     }
-    agent_skills_path(agent_id)
+    groups
 }
 
 // =================== Skill 数据结构 ===================
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AgentRef {
+    pub id: String,
+    pub name: String,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Skill {
@@ -83,10 +77,7 @@ pub struct Skill {
     #[serde(rename = "dirPath")]
     pub dir_path: String,
     pub files: Vec<String>,
-    #[serde(rename = "agentId")]
-    pub agent_id: String,
-    #[serde(rename = "agentName")]
-    pub agent_name: String,
+    pub agents: Vec<AgentRef>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -100,7 +91,7 @@ pub struct SkillPreview {
     pub zip_path: String,
 }
 
-fn parse_skill_meta_with_agent(skill_dir: &Path, agent_id: &str, agent_name: &str) -> Option<Skill> {
+fn parse_skill_meta(skill_dir: &Path, agents: &[AgentRef]) -> Option<Skill> {
     let skill_md = skill_dir.join("SKILL.md");
     if !skill_md.exists() { return None; }
 
@@ -134,8 +125,7 @@ fn parse_skill_meta_with_agent(skill_dir: &Path, agent_id: &str, agent_name: &st
         dir_name: skill_dir.file_name()?.to_string_lossy().to_string(),
         dir_path: skill_dir.to_string_lossy().to_string(),
         files: collect_files(skill_dir),
-        agent_id: agent_id.to_string(),
-        agent_name: agent_name.to_string(),
+        agents: agents.to_vec(),
     })
 }
 
@@ -155,14 +145,14 @@ fn collect_files(base: &Path) -> Vec<String> {
 
 #[tauri::command]
 fn get_agent_sources() -> Vec<AgentSource> {
-    known_agent_dirs().into_iter().map(|(id, name)| {
-        let path = resolve_agent_path(&id);
+    agent_registry().iter().map(|a| {
+        let path = resolve_agent_global_path(a);
         let exists = path.as_ref().map(|p| p.exists()).unwrap_or(false);
         AgentSource {
+            id: a.id.clone(),
+            name: a.name.clone(),
             path: path.map(|p| p.to_string_lossy().to_string()).unwrap_or_default(),
             exists,
-            id,
-            name,
         }
     }).collect()
 }
@@ -170,20 +160,29 @@ fn get_agent_sources() -> Vec<AgentSource> {
 #[tauri::command]
 fn get_skills() -> Result<Vec<Skill>, String> {
     let mut skills = Vec::new();
-    for (id, name) in known_agent_dirs() {
-        if let Some(dir) = resolve_agent_path(&id) {
-            if !dir.exists() { continue; }
-            let entries = match fs::read_dir(&dir) {
-                Ok(e) => e,
-                Err(_) => continue,
-            };
-            for entry in entries.filter_map(|e| e.ok()) {
-                let path = entry.path();
-                if path.is_dir() {
-                    if let Some(skill) = parse_skill_meta_with_agent(&path, &id, &name) {
-                        skills.push(skill);
-                    }
-                }
+    for (dir, agent_defs) in group_agents_by_path() {
+        if !dir.exists() { continue; }
+        // 规范化扫描根目录，用于判断 skill 是否真正落在此路径下（排除指向别处的软链）
+        let canonical_dir = match fs::canonicalize(&dir) {
+            Ok(p) => p,
+            Err(_) => continue,
+        };
+        let agents: Vec<AgentRef> = agent_defs.iter()
+            .map(|a| AgentRef { id: a.id.clone(), name: a.name.clone() })
+            .collect();
+        let entries = match fs::read_dir(&dir) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if !path.is_dir() { continue; }
+            // 软链到其他 agent 目录的 skill（如 ~/.adal/skills/camoufox-cli → ~/.agents/...）跳过，
+            // 只在真实所在路径下展示一次，避免侧栏被 symlink 副本撑爆。
+            let Ok(canonical_skill) = fs::canonicalize(&path) else { continue };
+            if !canonical_skill.starts_with(&canonical_dir) { continue; }
+            if let Some(skill) = parse_skill_meta(&canonical_skill, &agents) {
+                skills.push(skill);
             }
         }
     }
@@ -401,10 +400,9 @@ fn preview_skill_zip(zip_path: String) -> Result<SkillPreview, String> {
     Ok(SkillPreview { name, description, license, body, files, zip_path })
 }
 
-/// 批量安装：将归档解压到多个 agent 目录
+/// 批量安装：将归档解压到多个 agent 目录（共享路径只解压一次）
 #[tauri::command]
 fn install_skill(zip_path: String, agent_ids: Vec<String>) -> Result<Vec<Skill>, String> {
-    // 先扫描归档，确认有 SKILL.md 并获取顶层目录名
     let (_, skill_md, top_dirs_raw) = scan_archive(&zip_path)?;
     if skill_md.is_none() { return Err("包内未找到 SKILL.md".to_string()); }
 
@@ -415,19 +413,23 @@ fn install_skill(zip_path: String, agent_ids: Vec<String>) -> Result<Vec<Skill>,
         s
     };
 
-    let known = known_agent_dirs();
-    let mut results = Vec::new();
-
+    let mut by_path: Vec<(PathBuf, Vec<AgentRef>)> = Vec::new();
     for agent_id in &agent_ids {
-        let target_dir = resolve_agent_path(agent_id)
+        let agent = agent_registry().iter().find(|a| &a.id == agent_id)
             .ok_or_else(|| format!("未知 agent: {}", agent_id))?;
-        let agent_name = known.iter().find(|(id, _)| id == agent_id)
-            .map(|(_, n)| n.clone())
-            .unwrap_or_else(|| agent_id.clone());
+        let target_dir = resolve_agent_global_path(agent)
+            .ok_or_else(|| format!("无法解析路径: {}", agent_id))?;
+        let aref = AgentRef { id: agent.id.clone(), name: agent.name.clone() };
+        match by_path.iter_mut().find(|(p, _)| *p == target_dir) {
+            Some(entry) => entry.1.push(aref),
+            None => by_path.push((target_dir, vec![aref])),
+        }
+    }
 
+    let mut results = Vec::new();
+    for (target_dir, agents) in by_path {
         fs::create_dir_all(&target_dir).map_err(|e| e.to_string())?;
 
-        // 如果归档有单个顶层目录，直接解压到 target_dir；否则解压到 target_dir/<stem>/
         let extract_to = if top_dirs_raw.is_some() {
             target_dir.clone()
         } else {
@@ -441,10 +443,10 @@ fn install_skill(zip_path: String, agent_ids: Vec<String>) -> Result<Vec<Skill>,
         let skill_dir = if let Some(ref top) = top_dirs_raw {
             extract_to.join(top)
         } else {
-            extract_to.clone()
+            extract_to
         };
 
-        if let Some(skill) = parse_skill_meta_with_agent(&skill_dir, agent_id, &agent_name) {
+        if let Some(skill) = parse_skill_meta(&skill_dir, &agents) {
             results.push(skill);
         }
     }

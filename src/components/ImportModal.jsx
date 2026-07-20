@@ -1,29 +1,52 @@
-import { useState, useRef } from 'react'
+import { useMemo, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Upload, FileText, ChevronLeft, X, Check } from 'lucide-react'
+import { getAgentColor } from '@/lib/agentColors'
+import { formatPathGroupName } from '@/lib/agentPaths'
 
-const AGENT_COLORS = {
-  'agents-shared':'#5856d6',
-  'cursor':'#7c3aed','claude-dev':'#d97706','windsurf':'#059669',
-  'continue':'#e11d48','claude-code':'#c9460a','opencode':'#0ea5e9',
-  'codex':'#059669','aider':'#7c3aed','gemini-cli':'#1a73e8',
-  'copilot':'#238636','zed':'#084c8d',
+/** 按物理路径去重：共享同一目录的多个 agent 合并成一个安装目标 */
+function groupSourcesByPath(sources) {
+  const map = new Map()
+  for (const a of sources) {
+    if (!a.exists) continue
+    const key = String(a.path || '').replace(/\/+$/, '')
+    if (!key) continue
+    if (!map.has(key)) {
+      map.set(key, {
+        pathKey: key,
+        path: a.path,
+        id: a.id,
+        agentIds: [a.id],
+        names: [a.name],
+        agents: [{ id: a.id, name: a.name }],
+      })
+    } else {
+      const g = map.get(key)
+      g.agentIds.push(a.id)
+      g.names.push(a.name)
+      g.agents.push({ id: a.id, name: a.name })
+    }
+  }
+  return [...map.values()].map(g => ({
+    ...g,
+    name: formatPathGroupName(g.pathKey, g.agents),
+  }))
 }
 
 export function ImportModal({ agentSources, onClose, onInstalled, addToast }) {
   const [step, setStep]             = useState('pick')
   const [preview, setPreview]       = useState(null)
-  const [checkedIds, setCheckedIds] = useState([])   // 用数组，避免 Set 闭包问题
+  const [checkedPaths, setCheckedPaths] = useState([])   // 按路径去重后的 pathKey
   const [loading, setLoading]       = useState(false)
   const [installing, setInstalling] = useState(false)
   const [dragging, setDragging]     = useState(false)
 
-  const available = agentSources.filter(a => a.exists)
+  const available = useMemo(() => groupSourcesByPath(agentSources), [agentSources])
 
-  const toggleAgent = (id) => {
-    setCheckedIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+  const togglePath = (pathKey) => {
+    setCheckedPaths(prev =>
+      prev.includes(pathKey) ? prev.filter(x => x !== pathKey) : [...prev, pathKey]
     )
   }
 
@@ -33,7 +56,7 @@ export function ImportModal({ agentSources, onClose, onInstalled, addToast }) {
       const result = await invoke('preview_skill_zip', { zipPath: path })
       setPreview(result)
       setStep('preview')
-      if (available.length > 0) setCheckedIds([available[0].id])
+      if (available.length > 0) setCheckedPaths([available[0].pathKey])
     } catch (err) { addToast(String(err), 'error') }
     finally { setLoading(false) }
   }
@@ -69,15 +92,19 @@ export function ImportModal({ agentSources, onClose, onInstalled, addToast }) {
   }
 
   const handleInstall = async () => {
-    if (checkedIds.length === 0) { addToast('请至少选择一个安装目标', 'error'); return }
+    if (checkedPaths.length === 0) { addToast('请至少选择一个安装目标', 'error'); return }
     setInstalling(true)
     try {
+      // 每个路径只传一个 agent id 即可（后端按路径去重）；保留首个代表 id
+      const agentIds = available
+        .filter(a => checkedPaths.includes(a.pathKey))
+        .map(a => a.id)
       const results = await invoke('install_skill', {
         zipPath: preview.zipPath,
-        agentIds: checkedIds,
+        agentIds,
       })
-      const names = results.map(s => s.name).join('、')
-      addToast(`已安装「${names}」到 ${results.length} 个 Agent`, 'success')
+      const names = [...new Set(results.map(s => s.name))].join('、')
+      addToast(`已安装「${names}」到 ${checkedPaths.length} 个目录`, 'success')
       onInstalled(); onClose()
     } catch (err) { addToast(String(err), 'error') }
     finally { setInstalling(false) }
@@ -158,13 +185,13 @@ export function ImportModal({ agentSources, onClose, onInstalled, addToast }) {
                   {available.length > 1 && (
                     <button
                       style={{ fontSize: 11.5, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}
-                      onClick={() => setCheckedIds(
-                        checkedIds.length === available.length
+                      onClick={() => setCheckedPaths(
+                        checkedPaths.length === available.length
                           ? []
-                          : available.map(a => a.id)
+                          : available.map(a => a.pathKey)
                       )}
                     >
-                      {checkedIds.length === available.length ? '取消全选' : '全选'}
+                      {checkedPaths.length === available.length ? '取消全选' : '全选'}
                     </button>
                   )}
                 </div>
@@ -176,12 +203,13 @@ export function ImportModal({ agentSources, onClose, onInstalled, addToast }) {
                 ) : (
                   <div className="agent-options">
                     {available.map(agent => {
-                      const isSel = checkedIds.includes(agent.id)
-                      const color = AGENT_COLORS[agent.id] || '#5856d6'
+                      const isSel = checkedPaths.includes(agent.pathKey)
+                      const color = getAgentColor(agent.id)
                       return (
-                        <div key={agent.id}
+                        <div key={agent.pathKey}
                           className={`agent-option${isSel ? ' selected' : ''}`}
-                          onClick={() => toggleAgent(agent.id)}
+                          onClick={() => togglePath(agent.pathKey)}
+                          title={agent.names.join('、')}
                         >
                           {/* Checkbox */}
                           <div style={{
@@ -211,18 +239,18 @@ export function ImportModal({ agentSources, onClose, onInstalled, addToast }) {
         <div className="modal-footer">
           {step === 'preview' && (
             <button className="btn btn-ghost btn-sm" style={{ marginRight: 'auto', gap: 4 }}
-              onClick={() => { setStep('pick'); setPreview(null); setCheckedIds([]) }}>
+              onClick={() => { setStep('pick'); setPreview(null); setCheckedPaths([]) }}>
               <ChevronLeft size={13} /> 重新选择
             </button>
           )}
           <button className="btn btn-ghost btn-sm" onClick={onClose}>取消</button>
           {step === 'preview' && (
             <button className="btn btn-primary btn-sm" onClick={handleInstall}
-              disabled={checkedIds.length === 0 || installing || available.length === 0}>
+              disabled={checkedPaths.length === 0 || installing || available.length === 0}>
               {installing
                 ? '安装中…'
-                : checkedIds.length > 1
-                  ? `安装到 ${checkedIds.length} 个 Agent`
+                : checkedPaths.length > 1
+                  ? `安装到 ${checkedPaths.length} 个目录`
                   : '确认安装'}
             </button>
           )}

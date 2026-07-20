@@ -10,22 +10,9 @@ import { EditModal }   from './components/EditModal'
 import { ConfirmModal } from './components/ConfirmModal'
 import { Toast }       from './components/Toast'
 import { useToast }    from './hooks/useToast'
+import { getAgentColor } from './lib/agentColors'
+import { formatPathGroupName } from './lib/agentPaths'
 import './index.css'
-
-const AGENT_COLORS = {
-  'agents-shared':   '#5856d6',
-  'cursor':          '#7c3aed',
-  'claude-dev':      '#d97706',
-  'windsurf':        '#059669',
-  'continue':        '#e11d48',
-  'claude-code':     '#c9460a',
-  'opencode':        '#0ea5e9',
-  'codex':           '#059669',
-  'aider':           '#7c3aed',
-  'gemini-cli':      '#1a73e8',
-  'copilot':         '#238636',
-  'zed':             '#084c8d',
-}
 
 const THEME_STORAGE_KEY = 'skills-manager-theme'
 const THEME_WINDOW_BG = {
@@ -46,8 +33,8 @@ function getInitialTheme() {
   }
 }
 
-function Avatar({ name, agentId, size = 32, radius = 4 }) {
-  const color = AGENT_COLORS[agentId] || '#5856d6'
+function Avatar({ name, agents, size = 32, radius = 4 }) {
+  const color = getAgentColor(agents?.[0]?.id)
   return (
     <div className="agent-avatar" style={{
       '--agent-color': color,
@@ -57,6 +44,13 @@ function Avatar({ name, agentId, size = 32, radius = 4 }) {
       {name.charAt(0).toUpperCase()}
     </div>
   )
+}
+
+/** skill 所在的 agent skills 根目录（dirPath 的父目录） */
+function skillRootPath(dirPath) {
+  const normalized = String(dirPath || '').replace(/\\/g, '/').replace(/\/+$/, '')
+  const idx = normalized.lastIndexOf('/')
+  return idx > 0 ? normalized.slice(0, idx) : normalized
 }
 
 export default function App() {
@@ -160,6 +154,7 @@ export default function App() {
     return () => clearTimeout(debounceRef.current)
   }, [search])
 
+  // 按物理路径分组：共享 ~/.agents/skills 的多个 agent 只显示一组，避免侧栏膨胀
   const grouped = useMemo(() => {
     const q = debouncedSearch.toLowerCase()
     const filtered = skills.filter(s =>
@@ -168,8 +163,18 @@ export default function App() {
     )
     const map = new Map()
     for (const s of filtered) {
-      if (!map.has(s.agentId)) map.set(s.agentId, { name: s.agentName, id: s.agentId, skills: [] })
-      map.get(s.agentId).skills.push(s)
+      const root = skillRootPath(s.dirPath)
+      if (!map.has(root)) {
+        const agents = s.agents || []
+        map.set(root, {
+          id: root,
+          colorId: agents[0]?.id,
+          name: formatPathGroupName(root, agents),
+          agents,
+          skills: [],
+        })
+      }
+      map.get(root).skills.push(s)
     }
     return [...map.values()]
   }, [skills, debouncedSearch])
@@ -242,13 +247,13 @@ export default function App() {
             </div>
           ) : grouped.map(group => (
             <div key={group.id}>
-              <div className="group-header">
+              <div className="group-header" title={group.agents?.map(a => a.name).join('、')}>
                 <span className="group-dot"
-                  style={{ background: AGENT_COLORS[group.id] || 'var(--text-quaternary)' }} />
+                  style={{ background: getAgentColor(group.colorId) }} />
                 {group.name}
                 <span className="group-count">{group.skills.length}</span>
                 <span className="group-accent-line"
-                  style={{ background: `linear-gradient(90deg, ${AGENT_COLORS[group.id] || 'var(--text-quaternary)'}, transparent)` }} />
+                  style={{ background: `linear-gradient(90deg, ${getAgentColor(group.colorId)}, transparent)` }} />
               </div>
               {group.skills.map(skill => {
                 const isActive = cur?.dirPath === skill.dirPath
@@ -256,7 +261,7 @@ export default function App() {
                   <button key={skill.dirPath}
                     className={`skill-row${isActive ? ' active' : ''}`}
                     onClick={() => setSelected(skill)}>
-                    <Avatar name={skill.name} agentId={skill.agentId} size={30} radius={4} />
+                    <Avatar name={skill.name} agents={skill.agents} size={30} radius={4} />
                     <div className="skill-info">
                       <span className="skill-name">{skill.name}</span>
                       <span className="skill-desc">{skill.description || '暂无描述'}</span>
@@ -307,16 +312,22 @@ export default function App() {
             <div className="detail-hero">
               <div className="detail-head">
                 <div className="detail-title-row">
-                  <Avatar name={cur.name} agentId={cur.agentId} size={52} radius={6} />
+                  <Avatar name={cur.name} agents={cur.agents} size={52} radius={6} />
                   <div>
                     <div className="detail-name">{cur.name}</div>
                     <div className="detail-tags">
-                      <span className="badge badge-blue" style={{
-                        background: `${AGENT_COLORS[cur.agentId] || '#5856d6'}18`,
-                        color: AGENT_COLORS[cur.agentId] || '#5856d6',
-                      }}>
-                        {cur.agentName}
-                      </span>
+                      {(cur.agents?.length > 0) && (
+                        <span
+                          className="badge badge-blue"
+                          title={cur.agents.map(a => a.name).join('、')}
+                          style={{
+                            background: `${getAgentColor(cur.agents[0].id)}18`,
+                            color: getAgentColor(cur.agents[0].id),
+                          }}
+                        >
+                          {formatPathGroupName(skillRootPath(cur.dirPath), cur.agents)}
+                        </span>
+                      )}
                       <span className="badge badge-gray">
                         <FileText size={9} />
                         {cur.files?.length || 0} 文件
