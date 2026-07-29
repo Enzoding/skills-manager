@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { setTheme as setAppTheme } from '@tauri-apps/api/app'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { Zap, Search, X, FolderOpen, FileText, Pencil, Trash2, Plus, RotateCw, Sun, Moon } from 'lucide-react'
+import { Zap, Search, X, FolderOpen, FileText, Pencil, Trash2, Plus, RotateCw, Sun, Moon, ChevronDown } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ImportModal } from './components/ImportModal'
@@ -61,6 +61,7 @@ export default function App() {
   const [search, setSearch]           = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selected, setSelected]       = useState(null)
+  const [collapsedGroups, setCollapsedGroups] = useState({})
   const debounceRef = useRef(null)
   const [sidebarW, setSidebarW]       = useState(248)
   const resizerRef = useRef(null)
@@ -70,6 +71,10 @@ export default function App() {
   const [deleteSkill, setDeleteSkill] = useState(null)
   const [theme, setTheme]             = useState(getInitialTheme)
   const { toasts, addToast }          = useToast()
+
+  const toggleGroup = (groupId) => {
+    setCollapsedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }))
+  }
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -245,32 +250,46 @@ export default function App() {
               <div className="empty-title">{search ? '无匹配结果' : '暂无 Skills'}</div>
               {!search && <div className="empty-sub">点击「导入」添加</div>}
             </div>
-          ) : grouped.map(group => (
-            <div key={group.id}>
-              <div className="group-header" title={group.agents?.map(a => a.name).join('、')}>
-                <span className="group-dot"
-                  style={{ background: getAgentColor(group.colorId) }} />
-                {group.name}
-                <span className="group-count">{group.skills.length}</span>
-                <span className="group-accent-line"
-                  style={{ background: `linear-gradient(90deg, ${getAgentColor(group.colorId)}, transparent)` }} />
+          ) : grouped.map(group => {
+            const isCollapsed = !!collapsedGroups[group.id]
+            return (
+              <div key={group.id} className="group-section">
+                <div
+                  className={`group-header group-header-clickable${isCollapsed ? ' collapsed' : ''}`}
+                  title={group.agents?.map(a => a.name).join('、')}
+                  onClick={() => toggleGroup(group.id)}
+                  role="button"
+                  aria-expanded={!isCollapsed}
+                  aria-label={`${isCollapsed ? '展开' : '折叠'} ${group.name}`}
+                >
+                  <span className="group-dot"
+                    style={{ background: getAgentColor(group.colorId) }} />
+                  {group.name}
+                  <span className="group-count">{group.skills.length}</span>
+                  <ChevronDown
+                    size={12}
+                    className={`group-chevron${isCollapsed ? ' group-chevron-collapsed' : ''}`}
+                  />
+                </div>
+                <div className={`group-skills${isCollapsed ? ' group-skills-collapsed' : ''}`}>
+                  {group.skills.map(skill => {
+                    const isActive = cur?.dirPath === skill.dirPath
+                    return (
+                      <button key={skill.dirPath}
+                        className={`skill-row${isActive ? ' active' : ''}`}
+                        onClick={() => setSelected(skill)}>
+                        <Avatar name={skill.name} agents={skill.agents} size={30} radius={4} />
+                        <div className="skill-info">
+                          <span className="skill-name">{skill.name}</span>
+                          <span className="skill-desc">{skill.description || '暂无描述'}</span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-              {group.skills.map(skill => {
-                const isActive = cur?.dirPath === skill.dirPath
-                return (
-                  <button key={skill.dirPath}
-                    className={`skill-row${isActive ? ' active' : ''}`}
-                    onClick={() => setSelected(skill)}>
-                    <Avatar name={skill.name} agents={skill.agents} size={30} radius={4} />
-                    <div className="skill-info">
-                      <span className="skill-name">{skill.name}</span>
-                      <span className="skill-desc">{skill.description || '暂无描述'}</span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Footer */}
@@ -360,7 +379,13 @@ export default function App() {
             {/* Body */}
             {cur.body && (
               <div className="section">
-                <div className="section-label">文档内容</div>
+                <div className="section-label">
+                  文档内容
+                  <span className="skill-md-badge">
+                    <FileText size={10} style={{ flexShrink: 0 }} />
+                    SKILL.md
+                  </span>
+                </div>
                 <div className="body-block markdown-body">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{cur.body}</ReactMarkdown>
                 </div>

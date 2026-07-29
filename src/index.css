@@ -317,6 +317,42 @@ input, textarea, [contenteditable], .markdown-body, .cm-editor {
   display: none;
 }
 
+/* Collapsible group */
+.group-header-clickable {
+  cursor: default;
+  border-radius: 4px;
+  padding-left: 6px;
+  padding-right: 6px;
+  transition: background .14s var(--ease);
+}
+.group-header-clickable:hover {
+  background: var(--hover-bg);
+}
+.group-header-clickable.collapsed {
+  opacity: .75;
+}
+.group-chevron {
+  color: var(--text-quaternary);
+  flex-shrink: 0;
+  transition: transform .2s var(--ease);
+  transform: rotate(0deg);
+  margin-left: 2px;
+}
+.group-chevron-collapsed {
+  transform: rotate(-90deg);
+}
+.group-skills {
+  overflow: hidden;
+  max-height: 2000px;
+  transition: max-height .25s var(--ease), opacity .2s var(--ease);
+  opacity: 1;
+}
+.group-skills-collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .skill-row {
   display: flex;
   align-items: center;
@@ -565,8 +601,24 @@ input, textarea, [contenteditable], .markdown-body, .cm-editor {
   background: var(--accent);
 }
 
+.skill-md-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid rgba(211,74,44,.2);
+  border-radius: 4px;
+  padding: 1px 6px 1px 5px;
+  margin-left: 2px;
+}
+
 .desc-text {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-secondary);
   line-height: 1.8;
 }
@@ -590,15 +642,15 @@ input, textarea, [contenteditable], .markdown-body, .cm-editor {
 }
 
 /* ── Markdown body ── */
-.markdown-body { font-size: 13.5px; color: var(--text-secondary); line-height: 1.78; }
+.markdown-body { font-size: 15px; color: var(--text-secondary); line-height: 1.78; }
 .markdown-body h1,.markdown-body h2,.markdown-body h3,.markdown-body h4 {
   font-weight: 700; color: var(--text-primary); margin: 1.2em 0 .5em;
   letter-spacing: 0; line-height: 1.35;
 }
-.markdown-body h1 { font-size: 18px; }
-.markdown-body h2 { font-size: 15.5px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-.markdown-body h3 { font-size: 14px; }
-.markdown-body h4 { font-size: 13.5px; }
+.markdown-body h1 { font-size: 20px; }
+.markdown-body h2 { font-size: 17px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.markdown-body h3 { font-size: 15.5px; }
+.markdown-body h4 { font-size: 15px; }
 .markdown-body p  { margin: .6em 0; }
 .markdown-body ul,.markdown-body ol { padding-left: 1.5em; margin: .5em 0; }
 .markdown-body li { margin: .25em 0; }
